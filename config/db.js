@@ -1,0 +1,14 @@
+const mongoose = require("mongoose");
+require("dotenv").config();
+j;
+const dbUrl = process.env.DB_URL;
+main();
+
+async function main() {
+  try {
+    await mongoose.connect(dbUrl);
+    console.log("db connected");
+  } catch (error) {
+    console.log(error);
+  }
+}
