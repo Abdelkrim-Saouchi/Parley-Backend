@@ -7,6 +7,13 @@ app.use(express.urlencoded({ extended: true }));
 // connect db
 require("./config/db");
 
+// routes
+const indexRouter = require("./routes/index");
+const userRouter = require("./routes/user");
+
+app.use("/", indexRouter);
+app.use("/api/v1/users", userRouter);
+
 app.use((err, req, res, next) => {
   res.status = err.status || 500;
   if (req.app.get("env") === "development") {

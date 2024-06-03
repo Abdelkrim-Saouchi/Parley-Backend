@@ -23,14 +23,17 @@ const userSchema = new Schema({
   friendRequests: {
     type: [Schema.Types.ObjectId],
     ref: "User",
+    default: [],
   },
   friends: {
     type: [Schema.Types.ObjectId],
     ref: "User",
+    default: [],
   },
   groups: {
     type: [Schema.Types.ObjectId],
     ref: "Group",
+    default: [],
   },
   chatHistory: [
     { type: Schema.Types.ObjectId, ref: "Conversation" },
@@ -39,6 +42,7 @@ const userSchema = new Schema({
   ownGroups: {
     type: [Schema.Types.ObjectId],
     ref: "Group",
+    default: [],
   },
 });
 
