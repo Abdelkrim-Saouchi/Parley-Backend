@@ -10,7 +10,7 @@ opts.secretOrKey = process.env.SECRET;
 
 const verifyUser = async (payload, done) => {
   try {
-    const user = await User.findOne({ _id: payload.id }).exc();
+    const user = await User.findOne({ _id: payload.id }).exec();
 
     if (user) {
       return done(null, user);

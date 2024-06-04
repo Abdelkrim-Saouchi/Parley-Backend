@@ -7,6 +7,11 @@ app.use(express.urlencoded({ extended: true }));
 // connect db
 require("./config/db");
 
+// config passport js
+const passport = require("passport");
+const jwtStrategy = require("./config/jwtStrategy");
+passport.use(jwtStrategy);
+
 // routes
 const indexRouter = require("./routes/index");
 const userRouter = require("./routes/user");

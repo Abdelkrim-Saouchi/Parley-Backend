@@ -3,6 +3,9 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const Credential = require("../models/credential");
 const User = require("../models/user");
+const Code = require("../models/verificationCode");
+const generateVerificationCode = require("../util/generateVerificationCode");
+const sendMail = require("../util/sendMail");
 
 exports.singUp = [
   body("fullName", "Invalid fullName")
@@ -60,5 +63,96 @@ exports.singUp = [
         next(err);
       }
     });
+  },
+];
+
+exports.login = [
+  body("email", "Invalid email").trim().isLength({ min: 4 }).escape(),
+  body("password", "Incorrect password").trim().isLength({ min: 8 }).escape(),
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, password } = req.body;
+
+    try {
+      const credentials = await Credential.findOne({ email: email }).exec();
+
+      if (email === credentials.email) {
+        const match = bcrypt.compare(password, credentials.password);
+        if (match) {
+          const options = {};
+          options.expiresIn = "2d";
+          const secret = process.env.SECRET;
+          const user = await User.findOne({
+            credentials: credentials._id,
+          }).exec();
+          const token = jwt.sign(
+            { id: user._id, fullName: user.fullName },
+            secret,
+            options,
+          );
+
+          // send verifiaction code to user mail
+          const verifiactionCode = generateVerificationCode();
+          await sendMail(email, user.fullName, verifiactionCode);
+
+          // save verifiactionCode in database temporarely
+          const code = new Code({
+            userId: user._id,
+            verificationCode: `${verifiactionCode}`,
+          });
+          await code.save();
+
+          return res.json({
+            message: "Auth passed",
+            token: token,
+            userId: user._id,
+            expiresIn: options.expiresIn,
+            isActive: user.isActive,
+          });
+        }
+      }
+      return res.status(401).json({
+        message: "Auth failed",
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+];
+
+exports.activateAccount = [
+  body("verificationCode", "Invalid code")
+    .trim()
+    .isLength({ min: 6 })
+    .isInt()
+    .escape(),
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const verificationCode = await Code.findOne({
+        userId: req.user._id,
+      });
+      if (!verificationCode) {
+        return res.status(409).json({
+          message: "Verification failed! may be the code was expired",
+        });
+      }
+
+      const user = await User.findOne({ _id: req.user._id });
+      user.isActive = true;
+      await user.save();
+
+      res.json({ message: "Account activated" });
+    } catch (err) {
+      next(err);
+    }
   },
 ];
