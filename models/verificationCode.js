@@ -14,7 +14,7 @@ const CodeSchema = new Schema({
   },
   createdAt: {
     type: Date,
-    expires: 300, // 5 min
+    expires: 60, // 1 min
     default: Date.now(),
   },
 });
