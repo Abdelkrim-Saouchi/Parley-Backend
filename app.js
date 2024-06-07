@@ -1,23 +1,44 @@
 const express = require("express");
+const cors = require("cors");
 
 const app = express();
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 
 // connect db
 require("./config/db");
 
 // config passport js
 const passport = require("passport");
+app.use(passport.initialize());
+
+// JWT for email sign up / log in
 const jwtStrategy = require("./config/jwtStrategy");
 passport.use(jwtStrategy);
+
+// Google authentication
+const googleStrategy = require("./config/googleStrategy");
+passport.use(googleStrategy);
 
 // routes
 const indexRouter = require("./routes/index");
 const userRouter = require("./routes/user");
 
 app.use("/", indexRouter);
-app.use("/api/v1/users", userRouter);
+app.use(
+  "/api/v1/users",
+  (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*"); // Allow requests from any origin
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
+    next();
+  },
+  userRouter,
+);
 
 app.use((err, req, res, next) => {
   res.status = err.status || 500;

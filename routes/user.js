@@ -15,4 +15,19 @@ router.post(
   userController.activateAccount,
 );
 
+// Authenticate with google
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] }),
+);
+
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false }),
+  (req, res, next) => {
+    console.log("Profile 2:", req.user);
+    res.redirect("http://localhost:5174/");
+  },
+);
+
 module.exports = router;
