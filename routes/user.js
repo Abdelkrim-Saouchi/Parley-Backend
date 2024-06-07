@@ -2,8 +2,6 @@ const router = require("express").Router();
 const userController = require("../controllers/userController");
 const passport = require("passport");
 
-const CLIENT_HOME_PAGE = "http://localhost:5174/";
-
 // Sign up route
 router.post("/signup", userController.singUp);
 
@@ -28,14 +26,11 @@ router.get(
   passport.authenticate("google", {
     session: false,
   }),
-  (req, res) => {
-    const { userId } = req.user;
-    res.redirect(`${CLIENT_HOME_PAGE}?userId=${userId}`);
-  },
+  userController.oAuthRedirectCallback,
 );
 
-// activate OAuth account with custom jwt token
-router.get("/Oauth/activate", userController.oAuthActivation);
+// Login OAuth account with custom jwt token
+router.get("/Oauth/login", userController.oAuthLogin);
 
 // test
 router.get(

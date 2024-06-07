@@ -7,6 +7,8 @@ const Code = require("../models/verificationCode");
 const generateVerificationCode = require("../util/generateVerificationCode");
 const sendMail = require("../util/sendMail");
 
+const CLIENT_HOME_PAGE = "http://localhost:5174/";
+
 exports.singUp = [
   body("fullName", "Invalid fullName")
     .trim()
@@ -157,8 +159,27 @@ exports.activateAccount = [
   },
 ];
 
-exports.oAuthActivation = [
+exports.oAuthRedirectCallback = async (req, res, next) => {
+  const { userId } = req.user;
+  try {
+    const verificationCode = generateVerificationCode();
+    // save verifiactionCode in database temporarely
+    const code = new Code({
+      userId: userId,
+      verificationCode: `${verificationCode}`,
+    });
+    await code.save();
+    res.redirect(
+      `${CLIENT_HOME_PAGE}?userId=${userId}&code=${verificationCode}`,
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.oAuthLogin = [
   body("userId", "Invalid userId").trim().isLength({ min: 1 }).escape(),
+  body("code", "Invalid code").trim().isLength({ min: 6 }).escape(),
   async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -175,21 +196,31 @@ exports.oAuthActivation = [
         });
       }
 
-      const options = {};
-      options.expiresIn = "2d";
-      const secret = process.env.SECRET;
-      const token = jwt.sign(
-        { id: user._id, fullName: user.fullName },
-        secret,
-        options,
-      );
+      const savedCode = await Code.findOne({ userId: req.body.userId }).exec();
 
-      res.json({
-        message: "Account activated",
-        token,
-        expiresIn: options.expiresIn,
-        isActive: user.isActive,
-      });
+      if (!savedCode) {
+        return res.status(401).json({
+          message: "Activation failed!",
+        });
+      }
+
+      if (savedCode.verificationCode === req.body.code) {
+        const options = {};
+        options.expiresIn = "2d";
+        const secret = process.env.SECRET;
+        const token = jwt.sign(
+          { id: user._id, fullName: user.fullName },
+          secret,
+          options,
+        );
+
+        res.json({
+          message: "Account activated",
+          token,
+          expiresIn: options.expiresIn,
+          isActive: user.isActive,
+        });
+      }
     } catch (err) {
       next(err);
     }
