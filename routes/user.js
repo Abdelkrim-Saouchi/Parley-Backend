@@ -2,6 +2,8 @@ const router = require("express").Router();
 const userController = require("../controllers/userController");
 const passport = require("passport");
 
+const CLIENT_HOME_PAGE = "http://localhost:5174/";
+
 // Sign up route
 router.post("/signup", userController.singUp);
 
@@ -23,10 +25,24 @@ router.get(
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false }),
+  passport.authenticate("google", {
+    session: false,
+  }),
+  (req, res) => {
+    const { userId } = req.user;
+    res.redirect(`${CLIENT_HOME_PAGE}?userId=${userId}`);
+  },
+);
+
+// activate OAuth account with custom jwt token
+router.get("/Oauth/activate", userController.oAuthActivation);
+
+// test
+router.get(
+  "/info",
+  passport.authenticate("jwt", { session: false }),
   (req, res, next) => {
-    console.log("Profile 2:", req.user);
-    res.redirect("http://localhost:5174/");
+    res.json({ message: "here is your info" });
   },
 );
 

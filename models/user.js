@@ -9,6 +9,10 @@ const userSchema = new Schema({
     ref: "Credential",
     required: true,
   },
+  isOAuth: {
+    type: Boolean,
+    default: false,
+  },
   location: { type: String, default: "World Wide" },
   imgUrl: {
     type: String,

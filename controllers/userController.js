@@ -156,3 +156,42 @@ exports.activateAccount = [
     }
   },
 ];
+
+exports.oAuthActivation = [
+  body("userId", "Invalid userId").trim().isLength({ min: 1 }).escape(),
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findOne({
+        _id: req.body.userId,
+      });
+      if (!user || !user.isOAuth) {
+        return res.status(409).json({
+          message: "Activation failed!",
+        });
+      }
+
+      const options = {};
+      options.expiresIn = "2d";
+      const secret = process.env.SECRET;
+      const token = jwt.sign(
+        { id: user._id, fullName: user.fullName },
+        secret,
+        options,
+      );
+
+      res.json({
+        message: "Account activated",
+        token,
+        expiresIn: options.expiresIn,
+        isActive: user.isActive,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+];
