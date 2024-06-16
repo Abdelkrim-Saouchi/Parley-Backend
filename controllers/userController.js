@@ -33,7 +33,6 @@ exports.singUp = [
     }
 
     const email = await Credential.findOne({ email: req.body.email }).exec();
-    console.log("email:", email);
     if (email) {
       return res
         .status(400)
@@ -58,7 +57,18 @@ exports.singUp = [
         ]);
 
         if (savedUser && savedCredential) {
-          return res.status(201).json({ savedUser, savedCredential });
+          // send verifiaction code to user mail
+          const verifiactionCode = generateVerificationCode();
+          await sendMail(req.body.email, user.fullName, verifiactionCode);
+
+          // save verifiactionCode in database temporarely
+          const code = new Code({
+            userId: user._id,
+            verificationCode: `${verifiactionCode}`,
+          });
+          await code.save();
+
+          return res.status(201).json({ savedUser });
         }
         res.status(409).json({ message: "Sign up failed!" });
       } catch (err) {
@@ -98,17 +108,6 @@ exports.login = [
           secret,
           options,
         );
-
-        // send verifiaction code to user mail
-        const verifiactionCode = generateVerificationCode();
-        await sendMail(email, user.fullName, verifiactionCode);
-
-        // save verifiactionCode in database temporarely
-        const code = new Code({
-          userId: user._id,
-          verificationCode: `${verifiactionCode}`,
-        });
-        await code.save();
 
         return res.json({
           message: "Auth passed",
