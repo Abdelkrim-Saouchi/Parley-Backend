@@ -53,6 +53,16 @@ router.get(
 // Login OAuth account with custom jwt token
 router.get("/Oauth/login", userController.oAuthLogin);
 
+// GET user profile
+router.get("/profile/:id", userController.getUserProfile);
+
+// Update user Password
+router.post(
+  "/profile/password",
+  passport.authenticate("jwt", { session: false }),
+  userController.updateUserPassword,
+);
+
 // test
 router.get(
   "/info",

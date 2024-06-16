@@ -83,39 +83,40 @@ exports.login = [
       const credentials = await Credential.findOne({ email: email }).exec();
 
       if (email === credentials.email) {
-        const match = bcrypt.compare(password, credentials.password);
-        if (match) {
-          const options = {};
-          options.expiresIn = "2d";
-          const secret = process.env.SECRET;
-          const user = await User.findOne({
-            credentials: credentials._id,
-          }).exec();
-          const token = jwt.sign(
-            { id: user._id, fullName: user.fullName },
-            secret,
-            options,
-          );
-
-          // send verifiaction code to user mail
-          const verifiactionCode = generateVerificationCode();
-          await sendMail(email, user.fullName, verifiactionCode);
-
-          // save verifiactionCode in database temporarely
-          const code = new Code({
-            userId: user._id,
-            verificationCode: `${verifiactionCode}`,
-          });
-          await code.save();
-
-          return res.json({
-            message: "Auth passed",
-            token: token,
-            userId: user._id,
-            expiresIn: options.expiresIn,
-            isActive: user.isActive,
-          });
+        const match = await bcrypt.compare(password, credentials.password);
+        if (!match) {
+          return res.status(400).json({ message: "Invalid inputs" });
         }
+        const options = {};
+        options.expiresIn = "2d";
+        const secret = process.env.SECRET;
+        const user = await User.findOne({
+          credentials: credentials._id,
+        }).exec();
+        const token = jwt.sign(
+          { id: user._id, fullName: user.fullName },
+          secret,
+          options,
+        );
+
+        // send verifiaction code to user mail
+        const verifiactionCode = generateVerificationCode();
+        await sendMail(email, user.fullName, verifiactionCode);
+
+        // save verifiactionCode in database temporarely
+        const code = new Code({
+          userId: user._id,
+          verificationCode: `${verifiactionCode}`,
+        });
+        await code.save();
+
+        return res.json({
+          message: "Auth passed",
+          token: token,
+          userId: user._id,
+          expiresIn: options.expiresIn,
+          isActive: user.isActive,
+        });
       }
       return res.status(401).json({
         message: "Auth failed",
@@ -221,6 +222,75 @@ exports.oAuthLogin = [
           isActive: user.isActive,
         });
       }
+    } catch (err) {
+      next(err);
+    }
+  },
+];
+
+exports.getUserProfile = async (req, res, next) => {
+  try {
+    const user = await User.findOne(
+      { _id: req.params.id },
+      "fullName githubId isOAuth location imgUrl isActive",
+    ).exec();
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
+    }
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateUserPassword = [
+  body("password", "Invalid password").trim().isLength({ min: 8 }).escape(),
+  body("confirmation", "Passwords does not match").custom(
+    (value, { req }) => req.body.password === value,
+  ),
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findOne({
+        _id: req.user.id,
+      }).exec();
+      if (!user) {
+        return res.status(404).json({ message: "User not found!" });
+      }
+      // if it is OAuth provider other than google OAuth
+      if (!user.credentials) {
+        return res
+          .status(409)
+          .json({ message: "Can not Modify OAuth provider's password" });
+      }
+      const credentials = await Credential.findOne({
+        _id: user.credentials,
+      }).exec();
+
+      // if it is google OAuth
+      if (credentials.password === "OAuthPassword") {
+        return res.status(409).json({
+          message:
+            "You are Signed with google OAuth, we can not change google passwords",
+        });
+      }
+      console.log("run");
+      // if it is email sign up
+      bcrypt.hash(req.body.password, 10, async (err, hashedPassword) => {
+        if (err) return next(err);
+        console.log("old password:", credentials.password);
+        credentials.password = hashedPassword;
+        const newCredentials = await credentials.save();
+        if (!newCredentials) {
+          return res.status(409).json({ message: "Password upadate failed!" });
+        }
+        console.log("new password:", newCredentials.password);
+        return res.json({ message: "password Update successfully" });
+      });
     } catch (err) {
       next(err);
     }
