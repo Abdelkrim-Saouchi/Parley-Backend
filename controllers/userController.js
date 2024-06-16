@@ -295,3 +295,32 @@ exports.updateUserPassword = [
     }
   },
 ];
+
+exports.updateUserInfo = [
+  body("fullName", "Invalid full name").trim().isLength({ min: 3 }).escape(),
+  body("location", "Invalid location").trim().isLength({ min: 2 }).escape(),
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findOne({ _id: req.user.id }).exec();
+      if (!user) {
+        return res.status(404).json({ message: "user not found" });
+      }
+
+      user.fullName = req.body.fullName;
+      user.location = req.body.location;
+
+      const newUser = await user.save();
+      if (!newUser) {
+        return res.status(409).json({ message: "Update user info failed" });
+      }
+      res.json({ message: "Update user info succeded" });
+    } catch (err) {
+      next(err);
+    }
+  },
+];

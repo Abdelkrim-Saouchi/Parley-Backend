@@ -56,6 +56,13 @@ router.get("/Oauth/login", userController.oAuthLogin);
 // GET user profile
 router.get("/profile/:id", userController.getUserProfile);
 
+// Update user info
+router.post(
+  "/profile",
+  passport.authenticate("jwt", { session: false }),
+  userController.updateUserInfo,
+);
+
 // Update user Password
 router.post(
   "/profile/password",
