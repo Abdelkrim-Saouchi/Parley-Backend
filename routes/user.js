@@ -29,6 +29,27 @@ router.get(
   userController.oAuthRedirectCallback,
 );
 
+// Auth with facebook
+// router.get("/facebook", passport.authenticate("facebook"));
+//
+// router.get(
+//   "/facebook/callback",
+//   passport.authenticate("facebook", { session: false }),
+//   (req, res, next) => {
+//     res.redirect("http://localhost:5174/");
+//   },
+// );
+//
+
+// Auth with github
+router.get("/github", passport.authenticate("github"));
+
+router.get(
+  "/github/callback",
+  passport.authenticate("github", { session: false }),
+  userController.oAuthRedirectCallback,
+);
+
 // Login OAuth account with custom jwt token
 router.get("/Oauth/login", userController.oAuthLogin);
 

@@ -2,13 +2,13 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 require("dotenv").config();
 const User = require("../models/user");
 const Credential = require("../models/credential");
-const hostName = require("../util/hostname");
+const clientHostName = require("../util/hostname");
 
 module.exports = new GoogleStrategy(
   {
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: `${hostName}/api/v1/users/google/callback`,
+    callbackURL: `${clientHostName}/api/v1/users/google/callback`,
   },
   async (accessToken, refreshToken, profile, done) => {
     try {

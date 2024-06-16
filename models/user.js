@@ -3,11 +3,13 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
+  githubId: {
+    type: "String",
+  },
   fullName: { type: String, required: true },
   credentials: {
     type: Schema.Types.ObjectId,
     ref: "Credential",
-    required: true,
   },
   isOAuth: {
     type: Boolean,

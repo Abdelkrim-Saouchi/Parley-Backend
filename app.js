@@ -21,6 +21,14 @@ passport.use(jwtStrategy);
 const googleStrategy = require("./config/googleStrategy");
 passport.use(googleStrategy);
 
+// FaceBook authentication
+// const facebookStrategy = require("./config/facebookStrategy");
+// passport.use(facebookStrategy);
+
+// Github authentication
+const githubStrategy = require("./config/githubStategy");
+passport.use(githubStrategy);
+
 // routes
 const indexRouter = require("./routes/index");
 const userRouter = require("./routes/user");
