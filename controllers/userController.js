@@ -4,6 +4,8 @@ const bcrypt = require("bcryptjs");
 const Credential = require("../models/credential");
 const User = require("../models/user");
 const Code = require("../models/verificationCode");
+const Conversation = require("../models/conversation");
+const Group = require("../models/group");
 const generateVerificationCode = require("../util/generateVerificationCode");
 const sendMail = require("../util/sendMail");
 
@@ -319,6 +321,105 @@ exports.updateUserInfo = [
         return res.status(409).json({ message: "Update user info failed" });
       }
       res.json({ message: "Update user info succeded" });
+    } catch (err) {
+      next(err);
+    }
+  },
+];
+
+exports.getFriends = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).populate("friends").exec();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ friends: user.friends });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//TODO: make sure to solve no conversation or group models errors in new user
+exports.getChatHistory = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate("chatHistory")
+      .exec();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ chatHistory: user.chatHistory });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getSpecificConversation = async (req, res, next) => {
+  try {
+    const conversation = await Conversation.findOne({
+      initiator: req.user.id,
+      receiver: req.params.conversationId,
+    })
+      .populate("message")
+      .exec();
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+    res.json({ conversation: conversation });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.searchContacts = [
+  query("q", "Invalid search input").trim().escape(),
+  query("p", "Invalid search input").trim().escape(),
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.json({ errors: errors.array() });
+    }
+    const RESULT_PER_PAGE = 6;
+    try {
+      const q = req.query.q;
+      const p = req.query.p - 1 || 0;
+
+      const usersCount = await User.countDocuments({
+        $text: { $search: `\"${q}\"` },
+        isActive: true,
+      });
+
+      const groupsCount = await Group.countDocuments({
+        $text: { $search: `\"${q}\"` },
+      });
+
+      const users = await User.find({
+        $text: { $search: `\"${q}\"`, isActive: true },
+      })
+        .sort({
+          score: { $meta: "textScore" },
+        })
+        .limit(RESULT_PER_PAGE / 2)
+        .skip((p * RESULT_PER_PAGE) / 2)
+        .exec();
+
+      const groups = await Group.find({
+        $text: { $search: `\"${q}\"` },
+      })
+        .sort({
+          score: { $meta: "textScore" },
+        })
+        .limit(RESULT_PER_PAGE / 2)
+        .skip((p * RESULT_PER_PAGE) / 2)
+        .exec();
+
+      const count = usersCount + groupsCount;
+      const result = [...users, groups];
+      const totalPages = Math.ceil(count / RESULT_PER_PAGE);
+      res.json({ result: result, totalPages: totalPages });
     } catch (err) {
       next(err);
     }

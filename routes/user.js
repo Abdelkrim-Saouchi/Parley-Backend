@@ -70,6 +70,34 @@ router.post(
   userController.updateUserPassword,
 );
 
+// Get user friends
+router.get(
+  "/friends",
+  passport.authenticate("jwt", { session: false }),
+  userController.getFriends,
+);
+
+// GET user Chat history
+router.get(
+  "/chats/history",
+  passport.authenticate("jwt", { session: false }),
+  userController.getChatHistory,
+);
+
+// GET specific conversation
+router.get(
+  "/chats/:conversationId",
+  passport.authenticate("jwt", { session: false }),
+  userController.getSpecificConversation,
+);
+
+// Search users and goups route
+router.get(
+  "/search",
+  passport.authenticate("jwt", { session: false }),
+  userController.searchContacts,
+);
+
 // test
 router.get(
   "/info",
